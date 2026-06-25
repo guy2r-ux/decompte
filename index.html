@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Les 2R vont en Suisse 🇨🇭</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      max-width: 420px;
+      width: 90%;
+      position: relative;
+      z-index: 10;
+    }
+    .icon { font-size: 40px; margin-bottom: 1rem; }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 0.4rem;
+    }
+    .date-label {
+      font-size: 13px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 2rem;
+    }
+
+    .units {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    .unit {
+      background: rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      min-width: 74px;
+    }
+    .unit-number {
+      font-size: 34px;
+      font-weight: 700;
+      color: #f7c948;
+      line-height: 1;
+    }
+    .unit-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.5);
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .progress-bg {
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 6px;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #f7c948, #f0a500);
+      transition: width 1s linear;
+    }
+    .done { font-size: 24px; font-weight: 600; color: #fff; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="card">
+    <div class="icon">🏔️</div>
+<h1>Les 2R vont en Suisse 🇨🇭</h1>
+    <div class="date-label">Vendredi 25 juillet 2026 à 05h00</div>
+    <div class="units" id="units">
+      <div class="unit"><div class="unit-number" id="days">--</div><div class="unit-label">Jours</div></div>
+      <div class="unit"><div class="unit-number" id="hours">--</div><div class="unit-label">Heures</div></div>
+      <div class="unit"><div class="unit-number" id="minutes">--</div><div class="unit-label">Minutes</div></div>
+      <div class="unit"><div class="unit-number" id="seconds">--</div><div class="unit-label">Secondes</div></div>
+    </div>
+    <div class="progress-bg"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <script>
+    // Bouncing cheese
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const cheese = {
+      x: 200, y: 200,
+      size: 60,
+      vx: 2.8, vy: 2.2,
+      angle: 0,
+      spin: 0.02
+    };
+
+    function drawCheese(x, y, size, angle) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+
+      // Corps du fromage (triangle arrondi)
+      ctx.beginPath();
+      ctx.moveTo(0, -size * 0.65);
+      ctx.lineTo(size * 0.75, size * 0.45);
+      ctx.quadraticCurveTo(size * 0.55, size * 0.65, 0, size * 0.6);
+      ctx.quadraticCurveTo(-size * 0.55, size * 0.65, -size * 0.75, size * 0.45);
+      ctx.closePath();
+
+      const grad = ctx.createRadialGradient(-size*0.1, -size*0.2, size*0.05, 0, 0, size*0.9);
+      grad.addColorStop(0, '#ffe87a');
+      grad.addColorStop(1, '#e8a500');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = '#c87d00';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Trous
+      const holes = [{x: -size*0.25, y: size*0.1, r: size*0.1}, {x: size*0.2, y: size*0.05, r: size*0.08}, {x: -size*0.05, y: size*0.3, r: size*0.07}];
+      holes.forEach(h => {
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(180, 100, 0, 0.35)';
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, W, H);
+
+      cheese.x += cheese.vx;
+      cheese.y += cheese.vy;
+      cheese.angle += cheese.spin;
+
+      const margin = cheese.size * 0.8;
+      if (cheese.x < margin || cheese.x > W - margin) {
+        cheese.vx *= -1;
+        cheese.spin *= -1;
+        cheese.x = Math.max(margin, Math.min(W - margin, cheese.x));
+      }
+      if (cheese.y < margin || cheese.y > H - margin) {
+        cheese.vy *= -1;
+        cheese.y = Math.max(margin, Math.min(H - margin, cheese.y));
+      }
+
+      drawCheese(cheese.x, cheese.y, cheese.size, cheese.angle);
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // Countdown
+    const target = new Date(2026, 6, 25, 5, 0, 0);
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function update() {
+      const now = new Date();
+      const diff = target - now;
+      if (diff <= 0) {
+        document.getElementById('units').innerHTML = '<div class="done">🎉 Bon voyage en Suisse !</div>';
+        document.getElementById('progress-fill').style.width = '100%';
+        return;
+      }
+      const totalSec = Math.floor(diff / 1000);
+      document.getElementById('days').textContent = Math.floor(totalSec / 86400);
+      document.getElementById('hours').textContent = pad(Math.floor((totalSec % 86400) / 3600));
+      document.getElementById('minutes').textContent = pad(Math.floor((totalSec % 3600) / 60));
+      document.getElementById('seconds').textContent = pad(totalSec % 60);
+      const refStart = new Date(2026, 0, 1);
+      const pct = Math.min(100, ((now - refStart) / (target - refStart)) * 100);
+      document.getElementById('progress-fill').style.width = pct.toFixed(1) + '%';
+      setTimeout(update, 1000);
+    }
+    update();
+  </script>
+</body>
+</html>
