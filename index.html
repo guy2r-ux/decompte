@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Les 2R vont en Suisse 🇨🇭</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+    canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    .card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 0.5rem 0.6rem 0.6rem;
+      text-align: center;
+      max-width: 180px;
+      width: 50%;
+      position: relative;
+      z-index: 10;
+    }
+    .icon { font-size: 14px; margin-bottom: 0.2rem; }
+    h1 { font-size: 8px; font-weight: 600; color: #ffffff; margin-bottom: 0.15rem; }
+    .date-label { font-size: 6px; color: rgba(255,255,255,0.45); margin-bottom: 0.5rem; }
+    .units { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .unit { background: rgba(255,255,255,0.1); border-radius: 6px; padding: 0.25rem 0.3rem; min-width: 28px; }
+    .unit-number { font-size: 13px; font-weight: 700; color: #f7c948; line-height: 1; }
+    .unit-label { font-size: 5px; color: rgba(255,255,255,0.45); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .progress-bg { background: rgba(255,255,255,0.1); border-radius: 99px; height: 2px; overflow: hidden; }
+    .progress-fill { height: 2px; border-radius: 99px; background: linear-gradient(90deg, #f7c948, #f0a500); transition: width 1s linear; }
+    .done { font-size: 9px; font-weight: 600; color: #fff; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="card">
+    <div class="icon">🏔️</div>
+    <h1>Les 2R vont en Suisse 🇨🇭</h1>
+    <div class="date-label">Vendredi 25 juillet 2026 à 05h00</div>
+    <div class="units" id="units">
+      <div class="unit"><div class="unit-number" id="days">--</div><div class="unit-label">Jours</div></div>
+      <div class="unit"><div class="unit-number" id="hours">--</div><div class="unit-label">Heures</div></div>
+      <div class="unit"><div class="unit-number" id="minutes">--</div><div class="unit-label">Minutes</div></div>
+      <div class="unit"><div class="unit-number" id="seconds">--</div><div class="unit-label">Secondes</div></div>
+    </div>
+    <div class="progress-bg"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let W, H;
+    function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener("resize", resize);
+
+    const MAX_SPRITES = 15;
+
+    const img = new Image();
+    img.src = "guybrice1.png";
+
+    function makeSprite(x, y, vx, vy, size) {
+      return { x, y, vx, vy, size, angle: 0, spin: (Math.random() - 0.5) * 0.03 };
+    }
+
+    let sprites = [];
+
+    img.onload = function() {
+      sprites = [makeSprite(W / 2, H / 2, 2.8, 2.2, 110)];
+      animate();
+    };
+    img.onerror = function() {
+      sprites = [makeSprite(200, 200, 2.8, 2.2, 110)];
+      animate();
+    };
+
+    function animate() {
+      ctx.clearRect(0, 0, W, H);
+
+      const toAdd = [];
+
+      for (let s of sprites) {
+        s.x += s.vx;
+        s.y += s.vy;
+        s.angle += s.spin;
+
+        const margin = s.size * 0.5;
+        let bounced = false;
+
+        if (s.x < margin) { s.vx = Math.abs(s.vx); s.x = margin; bounced = true; }
+        if (s.x > W - margin) { s.vx = -Math.abs(s.vx); s.x = W - margin; bounced = true; }
+        if (s.y < margin) { s.vy = Math.abs(s.vy); s.y = margin; bounced = true; }
+        if (s.y > H - margin) { s.vy = -Math.abs(s.vy); s.y = H - margin; bounced = true; }
+
+        if (bounced && sprites.length + toAdd.length < MAX_SPRITES) {
+          // Nouveau sprite légèrement plus petit, direction aléatoire
+          const newSize = Math.max(s.size * 0.85, 40);
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 2 + Math.random() * 1.5;
+          toAdd.push(makeSprite(s.x, s.y, Math.cos(angle) * speed, Math.sin(angle) * speed, newSize));
+        }
+
+        // Dessin en respectant les proportions
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.angle);
+        if (img.naturalWidth && img.naturalHeight) {
+          const ratio = img.naturalWidth / img.naturalHeight;
+          const drawH = s.size;
+          const drawW = drawH * ratio;
+          ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+        } else {
+          ctx.drawImage(img, -s.size / 2, -s.size / 2, s.size, s.size);
+        }
+        ctx.restore();
+      }
+
+      for (let ns of toAdd) sprites.push(ns);
+
+      requestAnimationFrame(animate);
+    }
+
+    // Décompte
+    const target = new Date(2026, 6, 25, 5, 0, 0);
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function update() {
+      const now = new Date();
+      const diff = target - now;
+      if (diff <= 0) {
+        document.getElementById("units").innerHTML = "<div class='done'>🎉 Bon voyage !</div>";
+        document.getElementById("progress-fill").style.width = "100%";
+        return;
+      }
+      const totalSec = Math.floor(diff / 1000);
+      document.getElementById("days").textContent = Math.floor(totalSec / 86400);
+      document.getElementById("hours").textContent = pad(Math.floor((totalSec % 86400) / 3600));
+      document.getElementById("minutes").textContent = pad(Math.floor((totalSec % 3600) / 60));
+      document.getElementById("seconds").textContent = pad(totalSec % 60);
+      const refStart = new Date(2026, 0, 1);
+      const pct = Math.min(100, ((now - refStart) / (target - refStart)) * 100);
+      document.getElementById("progress-fill").style.width = pct.toFixed(1) + "%";
+      setTimeout(update, 1000);
+    }
+    update();
+  </script>
+</body>
+</html>
